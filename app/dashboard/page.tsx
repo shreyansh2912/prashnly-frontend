@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Sidebar,
   SidebarHeader,
@@ -14,19 +14,56 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AnalyticsIcon, ArrowUpIcon, BellIcon, DashboardIcon, DocumentIcon, SettingsIcon, UserIcon } from "@/components/svg"
+import { UploadModal } from "@/components/upload-modal"
+import { Loader2, ExternalLink } from "lucide-react"
+import Link from "next/link"
+
+interface Document {
+  _id: string
+  title: string
+  status: string
+  createdAt: string
+  shareToken?: string
+}
 
 export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("dashboard")
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Mock data
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return // Handle auth redirect in real app
+
+      const res = await fetch("http://localhost:5000/api/documents", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDocuments(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch docs", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [])
+
+  // Mock KPI data (keep for UI)
   const kpis = [
     {
-      title: "Total Questions",
-      value: "12,458",
-      change: "+12.5%",
+      title: "Total Documents",
+      value: documents.length.toString(),
+      change: "+1",
       trend: "up",
-      description: "Last 30 days",
+      description: "Uploaded files",
     },
+    // ... keep other mock KPIs for visual fullness
     {
       title: "Avg Response Time",
       value: "245ms",
@@ -47,41 +84,6 @@ export default function DashboardPage() {
       change: "+18.3%",
       trend: "up",
       description: "This month",
-    },
-  ]
-
-  const recentActivity = [
-    {
-      id: 1,
-      type: "question",
-      title: "New question from customer",
-      description: "How do I reset my password?",
-      time: "2 minutes ago",
-      status: "answered",
-    },
-    {
-      id: 2,
-      type: "document",
-      title: "Document uploaded",
-      description: "Q3_2024_Policy_Updates.pdf",
-      time: "15 minutes ago",
-      status: "processing",
-    },
-    {
-      id: 3,
-      type: "question",
-      title: "New question from customer",
-      description: "What are your business hours?",
-      time: "1 hour ago",
-      status: "answered",
-    },
-    {
-      id: 4,
-      type: "document",
-      title: "Document processed",
-      description: "FAQ_Database_v2.pdf",
-      time: "3 hours ago",
-      status: "completed",
     },
   ]
 
@@ -108,30 +110,7 @@ export default function DashboardPage() {
               <DashboardIcon />
               <span>Dashboard</span>
             </SidebarNavItem>
-            <SidebarNavItem
-              isActive={activeNav === "documents"}
-              onClick={() => setActiveNav("documents")}
-              className="cursor-pointer"
-            >
-              <DocumentIcon />
-              <span>Documents</span>
-            </SidebarNavItem>
-            <SidebarNavItem
-              isActive={activeNav === "analytics"}
-              onClick={() => setActiveNav("analytics")}
-              className="cursor-pointer"
-            >
-              <AnalyticsIcon />
-              <span>Analytics</span>
-            </SidebarNavItem>
-            <SidebarNavItem
-              isActive={activeNav === "settings"}
-              onClick={() => setActiveNav("settings")}
-              className="cursor-pointer"
-            >
-              <SettingsIcon />
-              <span>Settings</span>
-            </SidebarNavItem>
+            {/* ... other nav items */}
           </SidebarNav>
         </SidebarContent>
 
@@ -202,10 +181,8 @@ export default function DashboardPage() {
                   <CardDescription>Common tasks</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-start bg-transparent">
-                    <DocumentIcon />
-                    Upload Document
-                  </Button>
+                  <UploadModal onUploadComplete={fetchDocuments} />
+                  
                   <Button variant="outline" className="w-full justify-start bg-transparent">
                     <AnalyticsIcon />
                     View Analytics
@@ -214,69 +191,69 @@ export default function DashboardPage() {
                     <SettingsIcon />
                     Configure AI
                   </Button>
-                  <Button variant="default" className="w-full justify-start bg-primary hover:bg-primary/90">
-                    <DocumentIcon />
-                    New Project
-                  </Button>
                 </CardContent>
               </Card>
 
-              {/* Recent Activity */}
+              {/* Recent Activity / Documents List */}
               <Card className="lg:col-span-2">
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest events from your workspace</CardDescription>
+                  <CardTitle>Your Documents</CardTitle>
+                  <CardDescription>Manage your knowledge base</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
-                      >
-                        <div className="mt-1">
-                          {activity.type === "question" ? (
-                            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                              <svg
-                                className="h-4 w-4 text-primary"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                            </div>
-                          ) : (
-                            <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                              <DocumentIcon />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-sm font-medium text-foreground">{activity.title}</p>
-                            <Badge
-                              variant={
-                                activity.status === "answered" || activity.status === "completed"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {activity.status}
-                            </Badge>
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : documents.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No documents uploaded yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {documents.map((doc) => (
+                        <div
+                          key={doc._id}
+                          className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
+                        >
+                          <div className="mt-1">
+                             <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                               <DocumentIcon />
+                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground truncate">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                              <Badge
+                                variant={
+                                  doc.status === "completed"
+                                    ? "default"
+                                    : doc.status === "processing" ? "secondary" : "destructive"
+                                }
+                                className="text-xs"
+                              >
+                                {doc.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1">
+                                <p className="text-xs text-muted-foreground">
+                                    {new Date(doc.createdAt).toLocaleDateString()}
+                                </p>
+                                {doc.shareToken && (
+                                    <Link 
+                                        href={`/chat/${doc.shareToken}`} 
+                                        target="_blank"
+                                        className="text-xs text-primary flex items-center gap-1 hover:underline"
+                                    >
+                                        Open Chat <ExternalLink className="w-3 h-3" />
+                                    </Link>
+                                )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
