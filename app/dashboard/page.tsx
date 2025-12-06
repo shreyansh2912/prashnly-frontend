@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { AnalyticsIcon, ArrowUpIcon, BellIcon, DashboardIcon, DocumentIcon, SettingsIcon, UserIcon } from "@/components/svg"
 import { UploadModal } from "@/components/upload-modal"
+import { API_URL } from "@/lib/config"
 import { Loader2, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
@@ -36,7 +37,7 @@ export default function DashboardPage() {
       const token = localStorage.getItem("token")
       if (!token) return // Handle auth redirect in real app
 
-      const res = await fetch("http://localhost:5000/api/documents", {
+      const res = await fetch(`${API_URL}/api/documents`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -227,11 +228,12 @@ export default function DashboardPage() {
                               <Badge
                                 variant={
                                   doc.status === "completed"
-                                    ? "default"
-                                    : doc.status === "processing" ? "secondary" : "destructive"
+                                  ? "default"
+                                  : doc.status === "processing" ? "secondary" : "destructive"
                                 }
                                 className="text-xs"
-                              >
+                                >
+                                {/* {console.log(doc.shareToken)}            */}
                                 {doc.status}
                               </Badge>
                             </div>

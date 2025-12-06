@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -11,7 +11,10 @@ import {
   ChatBubbleMessage,
   ChatBubbleTimestamp,
 } from "@/components/ui/chat-bubble"
-import { Loader2, Send } from "lucide-react"
+import { Loader2, Send, MessageSquarePlus } from "lucide-react"
+import { API_URL } from "@/lib/config"
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   id: string
@@ -22,18 +25,15 @@ interface Message {
 
 export default function PublicChatPage() {
   const params = useParams()
-  const shareToken = params.shareToken as string
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const shareToken = params.shareId as string
+  const chatId = searchParams.get('chatId')
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "assistant",
-      content: "Hello! Ask me anything about this document.",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isChatStarted, setIsChatStarted] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -43,6 +43,51 @@ export default function PublicChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Load Chat History if chatId exists
+  useEffect(() => {
+    if (chatId) {
+      setIsChatStarted(true)
+      fetchChatHistory(chatId)
+    } else {
+      setIsChatStarted(false)
+      setMessages([
+        {
+          id: "1",
+          type: "assistant",
+          content: "Hello! Ask me anything about this document.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ])
+    }
+  }, [chatId])
+
+  const fetchChatHistory = async (id: string) => {
+    try {
+      setIsLoading(true)
+      const res = await fetch(`${API_URL}/api/chat/${id}?shareToken=${shareToken}`)
+      if (!res.ok) throw new Error("Failed to load chat history")
+      
+      const history = await res.json()
+      
+      const formattedMessages: Message[] = history.map((msg: any) => ({
+        id: msg._id,
+        type: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }))
+
+      setMessages(formattedMessages)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleStartChat = () => {
+    setIsChatStarted(true)
+  }
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -59,12 +104,13 @@ export default function PublicChatPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch("http://localhost:5000/api/chat", {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: userMessage.content,
           shareToken: shareToken,
+          chatId: chatId, // Send chatId if it exists
         }),
       })
 
@@ -78,6 +124,12 @@ export default function PublicChatPage() {
       }
 
       setMessages((prev) => [...prev, assistantMessage])
+
+      // If this was a new chat, update the URL with the new chatId
+      if (!chatId && data.chatId) {
+        router.push(`/chat/${shareToken}?chatId=${data.chatId}`)
+      }
+
     } catch (error) {
       console.error(error)
       setMessages((prev) => [
@@ -101,6 +153,26 @@ export default function PublicChatPage() {
     }
   }
 
+  if (!isChatStarted) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+            <span className="text-primary-foreground font-bold text-4xl">P</span>
+          </div>
+          <h1 className="text-3xl font-bold">Welcome to Prashnly</h1>
+          <p className="text-muted-foreground">
+            Start a new conversation to ask questions about this document. Your chat history will be saved.
+          </p>
+          <Button size="lg" className="w-full" onClick={handleStartChat}>
+            <MessageSquarePlus className="mr-2 h-5 w-5" />
+            Start New Chat
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Header */}
@@ -120,7 +192,17 @@ export default function PublicChatPage() {
             <ChatBubble key={message.id} variant={message.type}>
               <ChatBubbleAvatar>{message.type === "user" ? "You" : "AI"}</ChatBubbleAvatar>
               <ChatBubbleContent variant={message.type}>
-                <ChatBubbleMessage variant={message.type}>{message.content}</ChatBubbleMessage>
+                <div className={`prose dark:prose-invert max-w-none ${message.type === 'user' ? 'text-primary-foreground' : ''}`}>
+                    {message.type === 'assistant' ? (
+                      <div className="bg-blue-200 p-2 rounded-lg rounded-bl-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {message.content}
+                        </ReactMarkdown>
+                        </div>
+                    ) : (
+                        <ChatBubbleMessage variant={message.type}>{message.content}</ChatBubbleMessage>
+                    )}
+                </div>
                 <ChatBubbleTimestamp>{message.timestamp}</ChatBubbleTimestamp>
               </ChatBubbleContent>
             </ChatBubble>

@@ -9,9 +9,9 @@ import {
   ChatBubbleAvatar,
   ChatBubbleContent,
   ChatBubbleMessage,
-  ChatBubbleTimestamp,
 } from "@/components/ui/chat-bubble"
 import { Loader2, Send } from "lucide-react"
+import { API_URL } from "@/lib/config"
 
 interface Message {
   id: string
@@ -69,7 +69,7 @@ export default function EmbedPage() {
       // However, my current backend middleware expects 'Bearer token'. 
       // I might need to update authMiddleware to accept 'x-api-key' header.
       
-      const res = await fetch("http://localhost:5000/api/chat", {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",

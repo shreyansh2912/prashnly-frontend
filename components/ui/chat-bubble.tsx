@@ -35,7 +35,7 @@ const ChatBubbleContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { variant?: "user" | "assistant" }
 >(({ className, variant = "assistant", ...props }, ref) => (
-  <div ref={ref} className={cn("flex flex-col gap-1 max-w-xs", className)} {...props} />
+  <div ref={ref} className={cn("flex flex-col gap-1 max-w-xl", className)} {...props} />
 ))
 ChatBubbleContent.displayName = "ChatBubbleContent"
 

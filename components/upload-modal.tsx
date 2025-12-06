@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { API_URL } from "@/lib/config"
 import {
   Dialog,
   DialogContent,
@@ -39,7 +40,7 @@ export function UploadModal({ onUploadComplete }: UploadModalProps) {
 
     try {
       const token = localStorage.getItem("token") // Assuming token is stored here
-      const res = await fetch("http://localhost:5000/api/documents/upload", {
+      const res = await fetch(`${API_URL}/api/documents/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
