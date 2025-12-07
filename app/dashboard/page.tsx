@@ -16,8 +16,28 @@ import { Badge } from "@/components/ui/badge"
 import { AnalyticsIcon, ArrowUpIcon, BellIcon, DashboardIcon, DocumentIcon, SettingsIcon, UserIcon } from "@/components/svg"
 import { UploadModal } from "@/components/upload-modal"
 import { API_URL } from "@/lib/config"
-import { Loader2, ExternalLink } from "lucide-react"
+import { Loader2, ExternalLink, Trash2, LogOut } from "lucide-react"
 import Link from "next/link"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Switch } from "@/components/ui/switch"
 
 interface Document {
   _id: string
@@ -25,6 +45,8 @@ interface Document {
   status: string
   createdAt: string
   shareToken?: string
+  visibility?: string
+  isActive?: boolean
 }
 
 export default function DashboardPage() {
@@ -50,6 +72,64 @@ export default function DashboardPage() {
       setIsLoading(false)
     }
   }
+
+  const handleDelete = async (id: string) => {
+
+    try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`${API_URL}/api/documents/${id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (res.ok) {
+            setDocuments((prev) => prev.filter((doc) => doc._id !== id))
+        } else {
+            alert("Failed to delete document")
+        }
+    } catch (error) {
+        console.error("Delete failed", error)
+        alert("An error occurred while deleting")
+    }
+  }
+
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    // Optimistic update
+    setDocuments((prev) =>
+      prev.map((doc) =>
+        doc._id === id ? { ...doc, isActive: !currentStatus } : doc
+      )
+    )
+
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API_URL}/api/documents/${id}/status`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        // Revert on failure
+        setDocuments((prev) =>
+          prev.map((doc) =>
+            doc._id === id ? { ...doc, isActive: currentStatus } : doc
+          )
+        )
+        alert("Failed to update status")
+      }
+    } catch (error) {
+      console.error("Toggle status failed", error)
+      // Revert on error
+      setDocuments((prev) =>
+        prev.map((doc) =>
+          doc._id === id ? { ...doc, isActive: currentStatus } : doc
+        )
+      )
+      alert("An error occurred while updating status")
+    }
+  }
+
+
 
   useEffect(() => {
     fetchDocuments()
@@ -95,9 +175,9 @@ export default function DashboardPage() {
         <SidebarHeader>
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">
-              P
+              ?
             </div>
-            <span className="font-bold text-foreground">Prashnly</span>
+            <span className="font-bold text-foreground text-white">Prashnly</span>
           </div>
         </SidebarHeader>
 
@@ -111,15 +191,57 @@ export default function DashboardPage() {
               <DashboardIcon />
               <span>Dashboard</span>
             </SidebarNavItem>
+            <SidebarNavItem
+              isActive={activeNav === "chats"}
+              onClick={() => window.location.href = "/chats"}
+              className="cursor-pointer"
+            >
+              <div className="h-4 w-4 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <span>Chats</span>
+            </SidebarNavItem>
             {/* ... other nav items */}
           </SidebarNav>
         </SidebarContent>
 
         <SidebarFooter>
-          <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer">
-            <UserIcon />
-            <span>Profile</span>
-          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer w-full">
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </div>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will be redirected to the login page.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => {
+                  localStorage.removeItem("token")
+                  window.location.href = "/login"
+                }}>
+                  Logout
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </SidebarFooter>
       </Sidebar>
 
@@ -211,50 +333,90 @@ export default function DashboardPage() {
                       No documents uploaded yet.
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {documents.map((doc) => (
-                        <div
-                          key={doc._id}
-                          className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
-                        >
-                          <div className="mt-1">
-                             <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                               <DocumentIcon />
-                             </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-medium text-foreground">{doc.title}</p>
-                              <Badge
-                                variant={
-                                  doc.status === "completed"
-                                  ? "default"
-                                  : doc.status === "processing" ? "secondary" : "destructive"
-                                }
-                                className="text-xs"
-                                >
-                                {/* {console.log(doc.shareToken)}            */}
-                                {doc.status}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-4 mt-1">
-                                <p className="text-xs text-muted-foreground">
-                                    {new Date(doc.createdAt).toLocaleDateString()}
-                                </p>
-                                {doc.shareToken && (
-                                    <Link 
-                                        href={`/chat/${doc.shareToken}`} 
-                                        target="_blank"
-                                        className="text-xs text-primary flex items-center gap-1 hover:underline"
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Visibility</TableHead>
+                          <TableHead>Active</TableHead>
+                          <TableHead>Created At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {documents.map((doc) => (
+                          <TableRow key={doc._id}>
+                            <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                    <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                        <DocumentIcon />
+                                    </div>
+                                    <span className="truncate max-w-[200px]" title={doc.title}>{doc.title}</span>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <Badge
+                                    variant={
+                                    doc.status === "completed"
+                                    ? "default"
+                                    : doc.status === "processing" ? "secondary" : "destructive"
+                                    }
+                                    className="text-xs"
                                     >
-                                        Open Chat <ExternalLink className="w-3 h-3" />
-                                    </Link>
-                                )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                                    {doc.status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className="capitalize">{doc.visibility || 'private'}</TableCell>
+                            <TableCell>
+                                <Switch 
+                                    checked={doc.isActive !== false} 
+                                    onCheckedChange={() => handleToggleActive(doc._id, doc.isActive !== false)}
+                                />
+                            </TableCell>
+                            <TableCell>{new Date(doc.createdAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                    {doc.shareToken && (
+                                        <Link 
+                                            href={`/chat/${doc.shareToken}`} 
+                                            target="_blank"
+                                        >
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary">
+                                                <ExternalLink className="h-4 w-4" />
+                                            </Button>
+                                        </Link>
+                                    )}
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete your document
+                                            and remove it from our servers.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDelete(doc._id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   )}
                 </CardContent>
               </Card>

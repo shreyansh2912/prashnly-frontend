@@ -15,6 +15,8 @@ import { Loader2, Send, MessageSquarePlus } from "lucide-react"
 import { API_URL } from "@/lib/config"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { DocumentUnavailable } from "@/components/document-unavailable"
+import { PasswordProtection } from "@/components/password-protection"
 
 interface Message {
   id: string
@@ -34,6 +36,10 @@ export default function PublicChatPage() {
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isChatStarted, setIsChatStarted] = useState(false)
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true)
+  const [isDocumentActive, setIsDocumentActive] = useState(true)
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -43,6 +49,45 @@ export default function PublicChatPage() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Check document status
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/documents/public/${shareToken}`)
+        if (res.ok) {
+          const doc = await res.json()
+          setIsDocumentActive(doc.isActive !== false)
+          
+          if (doc.protectionType === 'password') {
+            setIsPasswordProtected(true)
+            // Check for existing session token
+            const token = sessionStorage.getItem(`auth_token_${shareToken}`)
+            if (token) {
+                setIsAuthenticated(true)
+            }
+          } else {
+            setIsAuthenticated(true) // Public document
+          }
+
+        } else {
+            // If 404 or other error, assume inactive or invalid
+            setIsDocumentActive(false)
+        }
+      } catch (error) {
+        console.error("Failed to check document status", error)
+        setIsDocumentActive(false)
+      } finally {
+        setIsCheckingStatus(false)
+      }
+    }
+
+    if (shareToken) {
+      checkStatus()
+    } else {
+        setIsCheckingStatus(false)
+    }
+  }, [shareToken])
 
   // Load Chat History if chatId exists
   useEffect(() => {
@@ -65,7 +110,15 @@ export default function PublicChatPage() {
   const fetchChatHistory = async (id: string) => {
     try {
       setIsLoading(true)
-      const res = await fetch(`${API_URL}/api/chat/${id}?shareToken=${shareToken}`)
+      const token = sessionStorage.getItem(`auth_token_${shareToken}`)
+      const headers: HeadersInit = {}
+      if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch(`${API_URL}/api/chats/${id}?shareToken=${shareToken}`, {
+          headers
+      })
       if (!res.ok) throw new Error("Failed to load chat history")
       
       const history = await res.json()
@@ -104,9 +157,15 @@ export default function PublicChatPage() {
     setIsLoading(true)
 
     try {
-      const res = await fetch(`${API_URL}/api/chat`, {
+      const token = sessionStorage.getItem(`auth_token_${shareToken}`)
+      const headers: HeadersInit = { "Content-Type": "application/json" }
+      if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+      }
+
+      const res = await fetch(`${API_URL}/api/chats`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: headers,
         body: JSON.stringify({
           question: userMessage.content,
           shareToken: shareToken,
@@ -151,6 +210,22 @@ export default function PublicChatPage() {
       e.preventDefault()
       handleSendMessage()
     }
+  }
+
+  if (isCheckingStatus) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!isDocumentActive) {
+    return <DocumentUnavailable />
+  }
+
+  if (isPasswordProtected && !isAuthenticated) {
+      return <PasswordProtection shareToken={shareToken} onAuthenticated={() => setIsAuthenticated(true)} />
   }
 
   if (!isChatStarted) {

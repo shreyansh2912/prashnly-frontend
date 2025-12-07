@@ -69,7 +69,7 @@ export default function EmbedPage() {
       // However, my current backend middleware expects 'Bearer token'. 
       // I might need to update authMiddleware to accept 'x-api-key' header.
       
-      const res = await fetch(`${API_URL}/api/chat`, {
+      const res = await fetch(`${API_URL}/api/chats`, {
         method: "POST",
         headers: { 
             "Content-Type": "application/json",
