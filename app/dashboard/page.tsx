@@ -1,14 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarNav,
-  SidebarNavItem,
-} from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 import { Topbar, TopbarLeft, TopbarRight } from "@/components/ui/topbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -171,79 +164,7 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">
-              ?
-            </div>
-            <span className="font-bold text-foreground text-white">Prashnly</span>
-          </div>
-        </SidebarHeader>
-
-        <SidebarContent>
-          <SidebarNav>
-            <SidebarNavItem
-              isActive={activeNav === "dashboard"}
-              onClick={() => setActiveNav("dashboard")}
-              className="cursor-pointer"
-            >
-              <DashboardIcon />
-              <span>Dashboard</span>
-            </SidebarNavItem>
-            <SidebarNavItem
-              isActive={activeNav === "chats"}
-              onClick={() => window.location.href = "/chats"}
-              className="cursor-pointer"
-            >
-              <div className="h-4 w-4 flex items-center justify-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-              </div>
-              <span>Chats</span>
-            </SidebarNavItem>
-            {/* ... other nav items */}
-          </SidebarNav>
-        </SidebarContent>
-
-        <SidebarFooter>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors cursor-pointer w-full">
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </div>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  You will be redirected to the login page.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => {
-                  localStorage.removeItem("token")
-                  window.location.href = "/login"
-                }}>
-                  Logout
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </SidebarFooter>
-      </Sidebar>
+      <AppSidebar activeItem="dashboard" />
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">

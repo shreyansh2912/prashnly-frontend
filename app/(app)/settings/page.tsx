@@ -2,7 +2,6 @@
 
 import type React from "react";
 import { useState } from "react";
-import { AppSidebar } from "@/components/app-sidebar";
 import { ProfileSection } from "@/components/settings/profile-section";
 import { SecuritySection } from "@/components/settings/security-section";
 import { SubscriptionSection } from "@/components/settings/subscription-section";
@@ -60,41 +59,38 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <AppSidebar activeItem="settings" />
-      <div className="flex-1 overflow-auto p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage your profile and preferences
-            </p>
-          </div>
+    <div className="flex-1 overflow-auto p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your profile and preferences
+          </p>
+        </div>
 
-          <div className="space-y-6">
-            <ProfileSection
-              formData={formData}
-              handleFormChange={handleFormChange}
-              avatar={avatar}
-              handleAvatarChange={handleAvatarChange}
-              handleSaveProfile={handleSaveProfile}
-            />
+        <div className="space-y-6">
+          <ProfileSection
+            formData={formData}
+            handleFormChange={handleFormChange}
+            avatar={avatar}
+            handleAvatarChange={handleAvatarChange}
+            handleSaveProfile={handleSaveProfile}
+          />
 
-            <SecuritySection
-              passwordData={passwordData}
-              handlePasswordChange={handlePasswordChange}
-              handleChangePassword={handleChangePassword}
-              isPasswordModalOpen={isPasswordModalOpen}
-              setIsPasswordModalOpen={setIsPasswordModalOpen}
-            />
+          <SecuritySection
+            passwordData={passwordData}
+            handlePasswordChange={handlePasswordChange}
+            handleChangePassword={handleChangePassword}
+            isPasswordModalOpen={isPasswordModalOpen}
+            setIsPasswordModalOpen={setIsPasswordModalOpen}
+          />
 
-            <SubscriptionSection />
+          <SubscriptionSection />
 
-            <PreferencesSection theme={theme} setTheme={setTheme} />
+          <PreferencesSection theme={theme} setTheme={setTheme} />
 
-            <DangerZone />
-          </div>
+          <DangerZone />
         </div>
       </div>
     </div>
